@@ -1,0 +1,29 @@
+[project]
+name = "hankelreg"
+description = ""
+readme = "README.md"
+requires-python = ">=3.8"
+version = "0.1.0"
+
+dependencies = [
+  "numpy",
+  "jax",
+  "h5py",
+  "matplotlib",
+  "hydra-core",
+  "hydra-submitit-launcher",
+  "humanize",
+  "pandas",
+  "seaborn",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pylint>=2.6.0",
+  "yapf",
+  "pytest",
+  "isort",
+]
+
+[tool.setuptools]
+packages = ["hankelreg"]
