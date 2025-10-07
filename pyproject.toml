@@ -8,6 +8,7 @@ version = "0.1.0"
 dependencies = [
   "numpy",
   "jax",
+  "optax",
   "h5py",
   "matplotlib",
   "hydra-core",
@@ -15,6 +16,10 @@ dependencies = [
   "humanize",
   "pandas",
   "seaborn",
+  "flax",
+  "einops",
+  "torch",
+  "torchvision",
 ]
 
 [project.optional-dependencies]
