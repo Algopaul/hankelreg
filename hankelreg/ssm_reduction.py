@@ -56,8 +56,8 @@ def reduce_by_rank(model, max_ranks, hsvs):
   mm = deepcopy(model)
   energies = []
   ranks = []
-  for i in range(len(mm.sequence_layers)):
-    A, B, C, D = model.sequence_layers[i].sequence_processor.get_ABCD()
+  for i in range(len(mm.layers)):
+    A, B, C, D = model.layers[i].sequence_processor.get_ABCD()
     # A = jnp.asarray(A, dtype=jnp.complex64)
     # B = jnp.asarray(B, dtype=jnp.complex64)
     # C = jnp.asarray(C, dtype=jnp.complex64)
@@ -66,13 +66,12 @@ def reduce_by_rank(model, max_ranks, hsvs):
       r = int(jnp.floor(A.shape[0] * r))
     ranks.append(r)
     energies.append(retained_energy(hsvs[i])[r])
-    assert type(r) == int
-    Ab, Bb, Cb = diagonalize(*balanced_realization(A, B, C, rank=r))
-    # Ab = jnp.asarray(Ab, dtype=jnp.complex64)
-    # Bb = jnp.asarray(Bb, dtype=jnp.complex64)
-    # Cb = jnp.asarray(Cb, dtype=jnp.complex64)
+    Ab, Bb, Cb = diagonalize(*balanced_realization(A, B, C, rank=int(r)))
+    Ab = jnp.asarray(Ab, dtype=jnp.complex64)
+    Bb = jnp.asarray(Bb, dtype=jnp.complex64)
+    Cb = jnp.asarray(Cb, dtype=jnp.complex64)
     new_sp = DiagonalConjugate(Ab, Bb, Cb, D)
-    mm.sequence_layers[i].sequence_processor = new_sp
+    mm.layers[i].sequence_processor = new_sp
   jax.config.update('jax_enable_x64', False)
   return mm, jnp.stack(energies), jnp.stack(ranks)
 
@@ -80,7 +79,7 @@ def reduce_by_rank(model, max_ranks, hsvs):
 def reduce_ssm(model, hsvs, max_rank):
   retained = mean_rank_to_energy(max_rank, hsvs)
   ranks = []
-  for i in range(len(model.sequence_layers)):
+  for i in range(len(model.layers)):
     ranks.append(reduction_index(hsvs[i], retained))
   ranks = jnp.stack(ranks)
   return reduce_by_rank(model, ranks, hsvs)[0], ranks

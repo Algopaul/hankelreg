@@ -1,4 +1,6 @@
 import logging
+import pickle
+from pathlib import Path
 
 import hydra
 import jax.numpy as jnp
@@ -11,6 +13,8 @@ from hankelreg.config import Config
 from hankelreg.dataset import get_dataset
 from hankelreg.model import SSM
 from hankelreg.util import log_duration
+
+results = {}
 
 
 @hydra.main(version_base=None, config_name='config', config_path='../conf')
@@ -25,7 +29,7 @@ def main(cfg: Config) -> None:
   eval_step = hopt.get_eval_step(cfg)
 
   for i_epoch in range(cfg.data.epochs):
-    pbar = tqdm(train, desc=f"Epoch {i_epoch} / {cfg.data.epochs}")
+    pbar = tqdm(train, desc=f"Epoch {i_epoch + 1} / {cfg.data.epochs}")
     for batch in pbar:
       x = jnp.reshape(jnp.array(batch[0]), (len(batch[0]), -1, 1))
       y = jnp.array(batch[1])
@@ -43,14 +47,22 @@ def main(cfg: Config) -> None:
     _, _, metrics = nnx.merge(graphdef, state)
     tm_test = metrics.compute()
     logging.info(
-        'After epoch %i [train] loss %.3e acc %.3f [test] loss %.3e acc %.3f',
-        i_epoch,
+        'After epoch %i [train] loss %.3e acc %.2f%% [test] loss %.3e acc %.2f%% [hsvsum] %.2e',
+        i_epoch + 1,
         tm_train['loss'],
-        tm_train['accuracy'],
+        100 * tm_train['accuracy'],
         tm_test['loss'],
-        tm_test['accuracy'],
+        100 * tm_test['accuracy'],
+        jnp.sum(model.hankel_singvals()),
     )
     metrics.reset()
+
+  results['state'] = nnx.to_pure_dict(state)
+  results['cfg'] = cfg
+  filename = f"data/{cfg.outfile}.pkl"
+  Path(filename).parent.mkdir(exist_ok=True, parents=True)
+  with open(filename, "wb") as f:
+    pickle.dump(results, f)
 
   pass
 

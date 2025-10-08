@@ -7,11 +7,11 @@ from hydra.core.config_store import ConfigStore
 class SSMConfig:
   channels_in: int = 1
   channels_out: int = 10
-  state_dim: int = 12
-  io_dim: int = 5
+  state_dim: int = 128
+  io_dim: int = 128
   layers: int = 4
   use_skip: bool = True
-  dropout_rate: float = 0.01
+  dropout_rate: float = 0.1
   angle_shift: float = 0.0
   angle_scale: float = 1.0
   retention_shift: float = 1.0
@@ -31,21 +31,15 @@ class OptimizerConfig:
   eval_interval: int = 1000
   optimizer_name: str = 'adamw'
   sequence_optimizer_name: str = 'adam'
-
   learning_rate: float = 1e-3
   final_learning_rate: float = 1e-5
   weight_decay: float = 5e-2
-  # Peak rates
   peak_learning_rate: float | None = None
   peak_sequence_learning_rate: float | None = None
-  # Final rates
   final_sequence_learning_rate: float | None = None
-  # Warmup
   warmup_steps: int = 500
   warmup_start_learning_rate: float = 0.0
-  # Entropy regularization
-  hsv_regmag: float = 1e-2
-  # Loss fn
+  hsv_regmag: float = 1e-5
   loss_fn: str = 'crossentr_integer'
 
 
@@ -55,6 +49,7 @@ class Config:
   ssm: SSMConfig = field(default_factory=SSMConfig)
   data: DatasetConfig = field(default_factory=DatasetConfig)
   opt: OptimizerConfig = field(default_factory=OptimizerConfig)
+  outfile: str = 'regularized'
 
 
 cs = ConfigStore.instance()

@@ -146,7 +146,7 @@ class DiagonalConjugate(nnx.Module):
     self.C = C
     self.D = D
 
-  def solve(self, input_sequence):
+  def __call__(self, input_sequence):
     L, B, C = (self.A, self.B, self.C)
     inputs = jax.vmap(lambda x: B @ x)(input_sequence)
     systems = jax.vmap(lambda _: L)(input_sequence)
@@ -170,6 +170,10 @@ class DiagonalConjugate(nnx.Module):
     system_out = self.system_update(system_i, system_j)
     state_out = self.state_update(system_j, state_i, state_j)
     return system_out, state_out
+
+  def batched_process(self, input_sequence):
+    p = lambda input_sequence: self(input_sequence)
+    return jax.vmap(p)(input_sequence)
 
 
 class SequenceLayer(nnx.Module):
