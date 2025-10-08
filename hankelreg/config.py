@@ -7,16 +7,16 @@ from hydra.core.config_store import ConfigStore
 class SSMConfig:
   channels_in: int = 1
   channels_out: int = 10
-  state_dim: int = 20
+  state_dim: int = 12
   io_dim: int = 5
-  layers: int = 6
+  layers: int = 4
   use_skip: bool = True
   dropout_rate: float = 0.01
   angle_shift: float = 0.0
   angle_scale: float = 1.0
   retention_shift: float = 1.0
   retention_scale: float = 0.25
-  collapse_mean: bool = True
+  reduce_mean: bool = True
 
 
 @dataclass

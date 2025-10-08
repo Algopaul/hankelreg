@@ -9,6 +9,7 @@ dependencies = [
   "numpy",
   "jax",
   "optax",
+  "tqdm",
   "h5py",
   "matplotlib",
   "hydra-core",

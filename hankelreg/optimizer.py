@@ -57,6 +57,7 @@ def get_optimizer(model, train_steps, cfg: OptimizerConfig):
 
 def get_train_step(model, metrics, optimizer, cfg: Config):
   graphdef, state = nnx.split((model, optimizer, metrics))
+  rm = cfg.opt.hsv_regmag
 
   @jax.jit
   def jax_train_step(graphdef, state, input, target):
@@ -64,19 +65,47 @@ def get_train_step(model, metrics, optimizer, cfg: Config):
 
     def loss_fn(model):
       y_pred = model(input)
-      reg = jnp.sum(model.hsvs())
+      reg = jnp.sum(model.hankel_singvals())
       l = optax.softmax_cross_entropy_with_integer_labels(y_pred, target)
-      return cfg.opt.hsv_regmag * reg + l, model_output
+      return rm * reg + jnp.mean(l), y_pred
 
     val_grad_fn = nnx.value_and_grad(loss_fn, has_aux=True)
     (loss, model_output), grads = val_grad_fn(model)
-    optimizer.update(grads)
+    optimizer.update(model, grads)
     metrics.update(loss=loss, logits=model_output, labels=target)
 
     state = nnx.state((model, optimizer, metrics))
     return loss, state, grads
 
   return jax_train_step, graphdef, state
+
+
+def get_metrics():
+  loss = nnx.metrics.Average('loss')
+  acc = nnx.metrics.Accuracy()
+  return nnx.MultiMetric(loss=loss, accuracy=acc)
+
+
+def get_eval_step(cfg: Config):
+  rm = cfg.opt.hsv_regmag
+
+  @jax.jit
+  def jax_eval_step(graphdef, state, input, target):
+    model, _, metrics = nnx.merge(graphdef, state)
+    model.eval()
+
+    def loss_fn(model):
+      y_pred = model(input)
+      reg = jnp.sum(model.hankel_singvals())
+      l = optax.softmax_cross_entropy_with_integer_labels(y_pred, target)
+      return rm * reg + jnp.mean(l), y_pred
+
+    loss, model_output = loss_fn(model)
+    metrics.update(loss=loss, logits=model_output, labels=target)
+
+    return state
+
+  return jax_eval_step
 
 
 def if_none(a, b):

@@ -156,6 +156,9 @@ class SequenceLayer(nnx.Module):
     self.activation = 'halfglu'
     self.prenorm = nnx.BatchNorm(io_dim, momentum=0.9, rngs=rngs)
 
+  def hankel_singvals(self):
+    return self.sequence_processor.hankel_singvals()
+
   def __call__(self, input_sequence):
     x = input_sequence
     if self.apply_skip:
@@ -187,7 +190,7 @@ class SSM(nnx.Module):
         retention_scale=cfg.retention_scale,
         dropout_rate=cfg.dropout_rate,
         apply_skip=cfg.use_skip,
-        collapse_mean=cfg.collapse_mean,
+        reduce_mean=cfg.reduce_mean,
         rngs=rngs,
     )
 
@@ -205,7 +208,7 @@ class SSM(nnx.Module):
       retention_scale=1.0,
       dropout_rate=0.01,
       apply_skip=True,
-      collapse_mean=False,
+      reduce_mean=False,
       rngs: nnx.Rngs,
   ):
     self.enc = nnx.Linear(channels_in, io_dim, rngs=rngs)
@@ -213,7 +216,7 @@ class SSM(nnx.Module):
     angle_init = shifted_normal(std_dev=angle_scale, shift=angle_shift)
     retention_init = shifted_normal(
         std_dev=retention_scale, shift=retention_shift)
-    self.collapse_mean = collapse_mean
+    self.reduce_mean = reduce_mean
     self.layers = nnx.List([
         SequenceLayer(
             sequence_processor=LTI(
@@ -229,20 +232,19 @@ class SSM(nnx.Module):
         ) for _ in range(n_layers)
     ])
 
+  def hankel_singvals(self):
+
+    hsvs = []
+    for i in range(len(self.layers)):
+      hsvs.append(self.layers[i].hankel_singvals())
+    return jnp.stack(hsvs)
+
   def __call__(self, x):
     x = self.enc(x)
     for sl in self.layers:
       x = sl(x)
     out = self.dec(x)
-    if self.collapse_mean:
+    if self.reduce_mean:
       return jnp.mean(out, axis=-2)
     else:
       return out
-
-
-if __name__ == "__main__":
-  sys = SSM(5, 5, 10, 3, 3, rngs=nnx.Rngs(0))
-  u = jrd.uniform(jrd.key(0), (3, 10, 5))
-  print(u)
-  print(sys(u))
-  print(sys(u).shape)

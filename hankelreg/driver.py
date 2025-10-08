@@ -4,11 +4,12 @@ import hydra
 import jax.numpy as jnp
 from flax import nnx
 from omegaconf import OmegaConf
+from tqdm import tqdm
 
+import hankelreg.optimizer as hopt
 from hankelreg.config import Config
 from hankelreg.dataset import get_dataset
 from hankelreg.model import SSM
-from hankelreg.optimizer import get_optimizer
 from hankelreg.util import log_duration
 
 
@@ -18,17 +19,38 @@ def main(cfg: Config) -> None:
   logging.info("\n%s", OmegaConf.to_yaml(cfg))
   model = SSM.from_config(cfg.ssm, nnx.Rngs(0))
   train, test = get_dataset(cfg.data)
-  opt = get_optimizer(model, len(train) * cfg.data.epochs, cfg.opt)
-  print(model.layers[0].sequence_processor.hankel_singvals())
+  metrics = hopt.get_metrics()
+  opt = hopt.get_optimizer(model, len(train) * cfg.data.epochs, cfg.opt)
+  train_step, graphdef, state = hopt.get_train_step(model, metrics, opt, cfg)
+  eval_step = hopt.get_eval_step(cfg)
 
-  @nnx.jit
-  def call(model, x):
-    return model(x)
+  for i_epoch in range(cfg.data.epochs):
+    pbar = tqdm(train, desc=f"Epoch {i_epoch} / {cfg.data.epochs}")
+    for batch in pbar:
+      x = jnp.reshape(jnp.array(batch[0]), (len(batch[0]), -1, 1))
+      y = jnp.array(batch[1])
+      loss_val, state, _ = train_step(graphdef, state, x, y)
+      pbar.set_postfix({"loss": f'{loss_val:.4f}'})
 
-  for idx, batch in enumerate(train):
-    x = jnp.reshape(jnp.array(batch[0]), (len(batch[0]), -1, 1))
-    y = jnp.array(batch[1])
-    print(idx, call(model, x).shape)
+    model, opt, metrics = nnx.merge(graphdef, state)
+    tm_train = metrics.compute()
+    metrics.reset()
+
+    for batch in test:
+      x = jnp.reshape(jnp.array(batch[0]), (len(batch[0]), -1, 1))
+      y = jnp.array(batch[1])
+      state = eval_step(graphdef, state, x, y)
+    _, _, metrics = nnx.merge(graphdef, state)
+    tm_test = metrics.compute()
+    logging.info(
+        'After epoch %i [train] loss %.3e acc %.3f [test] loss %.3e acc %.3f',
+        i_epoch,
+        tm_train['loss'],
+        tm_train['accuracy'],
+        tm_test['loss'],
+        tm_test['accuracy'],
+    )
+    metrics.reset()
 
   pass
 
