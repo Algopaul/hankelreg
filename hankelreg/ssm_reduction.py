@@ -27,7 +27,6 @@ def reduction_index(hsvs, min_energy=0.98):
 
 def mean_rank_to_energy(rank_percentage, hsvs):
   f1 = lambda x, y: reduction_index(x, y)
-  print('HSVS', len(hsvs[0]))
 
   def val(energy):
     ranks = 0
