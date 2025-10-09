@@ -1,6 +1,7 @@
 import logging
 import pickle
 from pathlib import Path
+from time import time
 
 import jax.numpy as jnp
 import optax
@@ -49,6 +50,13 @@ if __name__ == "__main__":
         y_pred = call(model, x)
         l = optax.softmax_cross_entropy_with_integer_labels(y_pred, y)
         metrics.update(loss=l, logits=y_pred, labels=y)
+
+      t0 = time()
+      for batch in test:
+        y_pred = call(model, x)
+      jax.block_until_ready(y_pred)
+      t1 = time()
+      print('Runtime at ', ratio, 'is ', t1 - t0)
       m = metrics.compute()
       df.loc[i, Path(datafile).stem] = m['accuracy']
 
