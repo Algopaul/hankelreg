@@ -1,5 +1,7 @@
 # Regularization for Deep State Space models
 
+<img width="1110" height="352" alt="overview" src="https://github.com/user-attachments/assets/c38cfc13-6fda-49b6-8ba5-3b2cd3566d20" />
+
 This repository contains code and an illustrative example for performing Hankel singular value based regularization for deep state space models (SSMs), as explored in our NeurIPS paper
 ```bibtex
 @article{SchwerdtnerBP2025Hankel,
