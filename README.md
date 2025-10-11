@@ -24,8 +24,6 @@ This will display the accuracies after applying truncation to the ratios `[0.5, 
 
 | truncation ratio | regularized  | unregularized |
 | ---------------- | -----------  | ------------- |
-|       0.5        |   99.50%     |   **99.57%**  |
-|       0.6        | **99.50%**   |     98.42%    |
 |       0.7        | **99.50%**   |     66.68%    |
 |       0.8        | **99.47%**   |     44.57%    |
 |       0.9        | **92.73%**   |     20.75%    |
